@@ -5,7 +5,7 @@ authors = ["Raphael Nestler <raphael.nestler@gmail.com>"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
 description = "Access the yts.mx API"
-categories = ["api-binding"]
+categories = ["api-bindings"]
 repository = "https://github.com/rnestler/yts-api-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
