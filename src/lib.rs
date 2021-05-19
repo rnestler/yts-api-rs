@@ -59,6 +59,7 @@ pub struct MovieList {
     pub movie_count: u32,
     pub limit: u32,
     pub page_number: u32,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub movies: Vec<Movie>,
 }
 
@@ -92,7 +93,7 @@ pub async fn list_movies(
         bytes.extend(chunk);
     }
     let body = String::from_utf8(bytes)?;
-    let response: Response = serde_json::from_str(&body).unwrap();
+    let response: Response = serde_json::from_str(&body)?;
     if let Status::Other(status) = response.status {
         return Err(format!("{}: {}", status, response.status_message).into());
     }
@@ -121,5 +122,21 @@ mod tests {
         assert_eq!(movie_list.limit, 20);
         assert_eq!(movie_list.page_number, 1);
         assert_eq!(movie_list.movies.len(), 10);
+    }
+
+    #[test]
+    fn deserialize_empty_test_data() {
+        static TEST_DATA: &str = include_str!("test/test_empty.json");
+        let response: Response = serde_json::from_str(TEST_DATA).unwrap();
+        assert_eq!(response.status, Status::Ok);
+        assert_eq!(response.status_message, "Query was successful");
+        let data = response.data.unwrap();
+        let movie_list = match data {
+            Data::MovieList(movie_list) => movie_list,
+        };
+        assert_eq!(movie_list.movie_count, 0);
+        assert_eq!(movie_list.limit, 20);
+        assert_eq!(movie_list.page_number, 1);
+        assert_eq!(movie_list.movies.len(), 0);
     }
 }
