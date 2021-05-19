@@ -1,3 +1,5 @@
+use hyper::{body::HttpBody, Client};
+use hyper_tls::HttpsConnector;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -71,6 +73,33 @@ pub struct Response {
     pub status: Status,
     pub status_message: String,
     pub data: Option<Data>,
+}
+
+pub async fn list_movies(
+    query_term: &str,
+) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+
+    let url = format!(
+        "https://yts.mx/api/v2/list_movies.json?query_term={}",
+        query_term
+    );
+    let mut res = client.get(url.parse()?).await?;
+    let mut bytes = Vec::new();
+    while let Some(next) = res.data().await {
+        let chunk = next?;
+        bytes.extend(chunk);
+    }
+    let body = String::from_utf8(bytes)?;
+    let response: Response = serde_json::from_str(&body).unwrap();
+    if let Status::Other(status) = response.status {
+        return Err(format!("{}: {}", status, response.status_message).into());
+    }
+    let data = response.data.ok_or("Data missing")?;
+    match data {
+        Data::MovieList(movie_list) => Ok(movie_list),
+    }
 }
 
 #[cfg(test)]
