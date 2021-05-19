@@ -92,7 +92,7 @@ pub async fn list_movies(
         bytes.extend(chunk);
     }
     let body = String::from_utf8(bytes)?;
-    let response: Response = serde_json::from_str(&body).unwrap();
+    let response: Response = serde_json::from_str(&body)?;
     if let Status::Other(status) = response.status {
         return Err(format!("{}: {}", status, response.status_message).into());
     }
