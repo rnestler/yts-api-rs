@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     Ok,
+    Other(String),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
@@ -69,7 +70,7 @@ pub enum Data {
 pub struct Response {
     pub status: Status,
     pub status_message: String,
-    pub data: Option<MovieList>,
+    pub data: Option<Data>,
 }
 
 #[cfg(test)]
@@ -81,5 +82,15 @@ mod tests {
     #[test]
     fn deserialize_test_data() {
         let response: Response = serde_json::from_str(TEST_DATA).unwrap();
+        assert_eq!(response.status, Status::Ok);
+        assert_eq!(response.status_message, "Query was successful");
+        let data = response.data.unwrap();
+        let movie_list = match data {
+            Data::MovieList(movie_list) => movie_list,
+        };
+        assert_eq!(movie_list.movie_count, 10);
+        assert_eq!(movie_list.limit, 20);
+        assert_eq!(movie_list.page_number, 1);
+        assert_eq!(movie_list.movies.len(), 10);
     }
 }
