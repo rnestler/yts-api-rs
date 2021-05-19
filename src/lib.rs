@@ -59,6 +59,7 @@ pub struct MovieList {
     pub movie_count: u32,
     pub limit: u32,
     pub page_number: u32,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub movies: Vec<Movie>,
 }
 
