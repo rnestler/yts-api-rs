@@ -1,0 +1,53 @@
+on:
+  push:
+
+name: CI
+
+jobs:
+
+  build_and_test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: 1.52
+          override: true
+      - name: Run build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --all-features
+      - name: Run test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: --all-features
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.52
+            components: clippy
+            override: true
+      - uses: actions-rs/clippy-check@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          args: --all-features
+
+  rustfmt:
+    name: Rustfmt
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - uses: actions-rs/toolchain@v1
+        with:
+            toolchain: 1.52
+            components: rustfmt
+            override: true
+      - run: cargo fmt -- --check
