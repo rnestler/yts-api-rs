@@ -226,6 +226,10 @@ impl<'a> ListMovies<'a> {
     }
 }
 
+#[deprecated(
+    since = "0.1.2",
+    note = "Use ListMovies::new().query_term(...).execute() instead"
+)]
 pub async fn list_movies(
     query_term: &str,
 ) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
