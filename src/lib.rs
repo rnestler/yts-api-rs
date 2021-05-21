@@ -111,6 +111,39 @@ pub enum Order {
     Asc,
 }
 
+pub trait ApiEndpoint {
+    fn get_url(&self) -> String;
+}
+
+fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
+    if let Some(value) = value {
+        url.push_str(&format!("{}={}&", name, value));
+    }
+}
+
+async fn execute(
+    api_endpoint: &dyn ApiEndpoint,
+) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+
+    let url = api_endpoint.get_url();
+
+    let mut res = client.get(url.parse()?).await?;
+    let mut bytes = Vec::new();
+    while let Some(next) = res.data().await {
+        let chunk = next?;
+        bytes.extend(chunk);
+    }
+    let body = String::from_utf8(bytes)?;
+    let response: Response = serde_json::from_str(&body)?;
+    if let Status::Other(status) = response.status {
+        return Err(format!("{}: {}", status, response.status_message).into());
+    }
+    let data = response.data.ok_or("Data missing")?;
+    Ok(data)
+}
+
 #[derive(Clone, Debug, Default)]
 pub struct ListMovies<'a> {
     /// The limit of results per page that has been set
@@ -181,47 +214,32 @@ impl<'a> ListMovies<'a> {
         self
     }
 
-    fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
-        if let Some(value) = value {
-            url.push_str(&format!("{}={}&", name, value));
-        }
-    }
-
-    pub fn get_url(&self) -> String {
-        let mut url = "https://yts.mx/api/v2/list_movies.json?".to_owned();
-
-        Self::add_query(&mut url, "limit", self.limit);
-        Self::add_query(&mut url, "page", self.page);
-        Self::add_query(&mut url, "quality", self.quality);
-        Self::add_query(&mut url, "minimum_rating", self.minimum_rating);
-        Self::add_query(&mut url, "query_term", self.query_term);
-        Self::add_query(&mut url, "genre", self.genre);
-        Self::add_query(&mut url, "sort_by", self.sort_by);
-        Self::add_query(&mut url, "order_by", self.order_by);
-        Self::add_query(&mut url, "wirth_rt_ratings", self.wirth_rt_ratings);
-        url
-    }
-
     pub async fn execute(&self) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-
-        let url = self.get_url();
-
-        let mut res = client.get(url.parse()?).await?;
-        let mut bytes = Vec::new();
-        while let Some(next) = res.data().await {
-            let chunk = next?;
-            bytes.extend(chunk);
-        }
-        let body = String::from_utf8(bytes)?;
-        let response: Response = serde_json::from_str(&body)?;
-        if let Status::Other(status) = response.status {
-            return Err(format!("{}: {}", status, response.status_message).into());
-        }
-        let data = response.data.ok_or("Data missing")?;
+        let data = execute(self).await?;
         match data {
             Data::MovieList(movie_list) => Ok(movie_list),
+        }
+    }
+}
+
+impl<'a> ApiEndpoint for ListMovies<'a> {
+    fn get_url(&self) -> String {
+        let mut url = "https://yts.mx/api/v2/list_movies.json?".to_owned();
+
+        add_query(&mut url, "limit", self.limit);
+        add_query(&mut url, "page", self.page);
+        add_query(&mut url, "quality", self.quality);
+        add_query(&mut url, "minimum_rating", self.minimum_rating);
+        add_query(&mut url, "query_term", self.query_term);
+        add_query(&mut url, "genre", self.genre);
+        add_query(&mut url, "sort_by", self.sort_by);
+        add_query(&mut url, "order_by", self.order_by);
+        add_query(&mut url, "wirth_rt_ratings", self.wirth_rt_ratings);
+        url
+    }
+}
+
+
         }
     }
 }
