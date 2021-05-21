@@ -40,9 +40,9 @@ pub struct Movie {
     pub rating: f32,
     pub runtime: u32,
     pub genres: Vec<String>,
-    pub summary: String,
+    pub summary: Option<String>,
     pub description_full: String,
-    pub synopsis: String,
+    pub synopsis: Option<String>,
     pub yt_trailer_code: String,
     pub language: String,
     pub mpa_rating: String,
@@ -51,10 +51,17 @@ pub struct Movie {
     pub small_cover_image: String,
     pub medium_cover_image: String,
     pub large_cover_image: String,
-    pub state: Status,
+    pub state: Option<Status>,
     pub torrents: Vec<Torrent>,
     pub date_uploaded: String,
     pub date_uploaded_unix: u64,
+    pub download_count: Option<u32>,
+    pub like_count: Option<u32>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct MovieDetail {
+    pub movie: Movie,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -70,6 +77,7 @@ pub struct MovieList {
 #[serde(untagged)]
 pub enum Data {
     MovieList(MovieList),
+    MovieDetails(MovieDetail),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -115,12 +123,14 @@ pub trait ApiEndpoint {
     fn get_url(&self) -> String;
 }
 
+/// Add a query parameter to the given URL
 fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
     if let Some(value) = value {
         url.push_str(&format!("{}={}&", name, value));
     }
 }
 
+/// Helper to execute an API endpoint
 async fn execute(
     api_endpoint: &dyn ApiEndpoint,
 ) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
@@ -218,6 +228,7 @@ impl<'a> ListMovies<'a> {
         let data = execute(self).await?;
         match data {
             Data::MovieList(movie_list) => Ok(movie_list),
+            _ => Err("Wrong data received".into()),
         }
     }
 }
@@ -239,8 +250,51 @@ impl<'a> ApiEndpoint for ListMovies<'a> {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct MovieDetails {
+    /// The ID of the movie
+    movie_id: u32,
+    /// When set the data returned will include the added image URLs
+    with_images: Option<bool>,
+    /// When set the data returned will include the added information about the cast
+    with_cast: Option<bool>,
+}
 
+impl MovieDetails {
+    pub fn new(movie_id: u32) -> MovieDetails {
+        MovieDetails {
+            movie_id,
+            with_images: None,
+            with_cast: None,
         }
+    }
+
+    pub fn with_images(&mut self, with_images: bool) -> &mut Self {
+        self.with_images = Some(with_images);
+        self
+    }
+
+    pub fn with_cast(&mut self, with_cast: bool) -> &mut Self {
+        self.with_cast = Some(with_cast);
+        self
+    }
+
+    pub async fn execute(&self) -> Result<MovieDetail, Box<dyn std::error::Error + Send + Sync>> {
+        let data = execute(self).await?;
+        match data {
+            Data::MovieDetails(movie) => Ok(movie),
+            _ => Err("Wrong data received".into()),
+        }
+    }
+}
+
+impl ApiEndpoint for MovieDetails {
+    fn get_url(&self) -> String {
+        let mut url = "https://yts.mx/api/v2/movie_details.json?".to_owned();
+        add_query(&mut url, "movie_id", Some(self.movie_id));
+        add_query(&mut url, "with_images", self.with_images);
+        add_query(&mut url, "with_cast", self.with_cast);
+        url
     }
 }
 
@@ -283,6 +337,7 @@ mod tests {
         let data = response.data.unwrap();
         let movie_list = match data {
             Data::MovieList(movie_list) => movie_list,
+            _ => panic!("Wrong data"),
         };
         assert_eq!(movie_list.movie_count, 10);
         assert_eq!(movie_list.limit, 20);
@@ -299,10 +354,20 @@ mod tests {
         let data = response.data.unwrap();
         let movie_list = match data {
             Data::MovieList(movie_list) => movie_list,
+            _ => panic!("Wrong data"),
         };
         assert_eq!(movie_list.movie_count, 0);
         assert_eq!(movie_list.limit, 20);
         assert_eq!(movie_list.page_number, 1);
         assert_eq!(movie_list.movies.len(), 0);
+    }
+
+    #[test]
+    fn deserialize_movie_details() {
+        static TEST_DATA: &str = include_str!("test/test_movie_details.json");
+
+        let response: Response = serde_json::from_str(TEST_DATA).unwrap();
+        assert_eq!(response.status, Status::Ok);
+        assert_eq!(response.status_message, "Query was successful");
     }
 }
