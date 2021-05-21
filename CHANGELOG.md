@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
  * Support all parameters for List Movies with the `ListMovies` builder
+ * Support for the movie details API endpoint
 
 ### Deprecated
 
