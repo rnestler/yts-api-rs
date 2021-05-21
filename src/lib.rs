@@ -27,6 +27,14 @@ pub struct Torrent {
     pub date_uploaded_unix: u64,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct Actor {
+    name: String,
+    character_name: String,
+    imdb_code: String,
+    url_small_image: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Movie {
     pub id: u32,
@@ -41,6 +49,7 @@ pub struct Movie {
     pub runtime: u32,
     pub genres: Vec<String>,
     pub summary: Option<String>,
+    pub description_intro: Option<String>,
     pub description_full: String,
     pub synopsis: Option<String>,
     pub yt_trailer_code: String,
@@ -51,12 +60,19 @@ pub struct Movie {
     pub small_cover_image: String,
     pub medium_cover_image: String,
     pub large_cover_image: String,
+    pub medium_screenshot_image1: Option<String>,
+    pub medium_screenshot_image2: Option<String>,
+    pub medium_screenshot_image3: Option<String>,
+    pub large_screenshot_image1: Option<String>,
+    pub large_screenshot_image2: Option<String>,
+    pub large_screenshot_image3: Option<String>,
     pub state: Option<Status>,
     pub torrents: Vec<Torrent>,
     pub date_uploaded: String,
     pub date_uploaded_unix: u64,
     pub download_count: Option<u32>,
     pub like_count: Option<u32>,
+    pub cast: Option<Vec<Actor>>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -365,9 +381,29 @@ mod tests {
     #[test]
     fn deserialize_movie_details() {
         static TEST_DATA: &str = include_str!("test/test_movie_details.json");
+        let response: Response = serde_json::from_str(TEST_DATA).unwrap();
+        assert_eq!(response.status, Status::Ok);
+        assert_eq!(response.status_message, "Query was successful");
+        let data = response.data.unwrap();
+        let movie_details = match data {
+            Data::MovieDetails(movie_details) => movie_details,
+            _ => panic!("Wrong data"),
+        };
+        assert_eq!(movie_details.movie.id, 10);
+    }
+
+    #[test]
+    fn deserialize_movie_details_full() {
+        static TEST_DATA: &str = include_str!("test/test_movie_details_full.json");
 
         let response: Response = serde_json::from_str(TEST_DATA).unwrap();
         assert_eq!(response.status, Status::Ok);
         assert_eq!(response.status_message, "Query was successful");
+        let data = response.data.unwrap();
+        let movie_details = match data {
+            Data::MovieDetails(movie_details) => movie_details,
+            _ => panic!("Wrong data"),
+        };
+        assert_eq!(movie_details.movie.id, 15);
     }
 }
