@@ -27,6 +27,14 @@ pub struct Torrent {
     pub date_uploaded_unix: u64,
 }
 
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
+pub struct Actor {
+    name: String,
+    character_name: String,
+    imdb_code: String,
+    url_small_image: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct Movie {
     pub id: u32,
@@ -40,9 +48,10 @@ pub struct Movie {
     pub rating: f32,
     pub runtime: u32,
     pub genres: Vec<String>,
-    pub summary: String,
+    pub summary: Option<String>,
+    pub description_intro: Option<String>,
     pub description_full: String,
-    pub synopsis: String,
+    pub synopsis: Option<String>,
     pub yt_trailer_code: String,
     pub language: String,
     pub mpa_rating: String,
@@ -51,10 +60,24 @@ pub struct Movie {
     pub small_cover_image: String,
     pub medium_cover_image: String,
     pub large_cover_image: String,
-    pub state: Status,
+    pub medium_screenshot_image1: Option<String>,
+    pub medium_screenshot_image2: Option<String>,
+    pub medium_screenshot_image3: Option<String>,
+    pub large_screenshot_image1: Option<String>,
+    pub large_screenshot_image2: Option<String>,
+    pub large_screenshot_image3: Option<String>,
+    pub state: Option<Status>,
     pub torrents: Vec<Torrent>,
     pub date_uploaded: String,
     pub date_uploaded_unix: u64,
+    pub download_count: Option<u32>,
+    pub like_count: Option<u32>,
+    pub cast: Option<Vec<Actor>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct MovieDetail {
+    pub movie: Movie,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -70,6 +93,7 @@ pub struct MovieList {
 #[serde(untagged)]
 pub enum Data {
     MovieList(MovieList),
+    MovieDetails(MovieDetail),
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -109,6 +133,41 @@ pub enum Sort {
 pub enum Order {
     Desc,
     Asc,
+}
+
+pub trait ApiEndpoint {
+    fn get_url(&self) -> String;
+}
+
+/// Add a query parameter to the given URL
+fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
+    if let Some(value) = value {
+        url.push_str(&format!("{}={}&", name, value));
+    }
+}
+
+/// Helper to execute an API endpoint
+async fn execute(
+    api_endpoint: &dyn ApiEndpoint,
+) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
+    let https = HttpsConnector::new();
+    let client = Client::builder().build::<_, hyper::Body>(https);
+
+    let url = api_endpoint.get_url();
+
+    let mut res = client.get(url.parse()?).await?;
+    let mut bytes = Vec::new();
+    while let Some(next) = res.data().await {
+        let chunk = next?;
+        bytes.extend(chunk);
+    }
+    let body = String::from_utf8(bytes)?;
+    let response: Response = serde_json::from_str(&body)?;
+    if let Status::Other(status) = response.status {
+        return Err(format!("{}: {}", status, response.status_message).into());
+    }
+    let data = response.data.ok_or("Data missing")?;
+    Ok(data)
 }
 
 #[derive(Clone, Debug, Default)]
@@ -181,48 +240,77 @@ impl<'a> ListMovies<'a> {
         self
     }
 
-    fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
-        if let Some(value) = value {
-            url.push_str(&format!("{}={}&", name, value));
-        }
-    }
-
-    pub fn get_url(&self) -> String {
-        let mut url = "https://yts.mx/api/v2/list_movies.json?".to_owned();
-
-        Self::add_query(&mut url, "limit", self.limit);
-        Self::add_query(&mut url, "page", self.page);
-        Self::add_query(&mut url, "quality", self.quality);
-        Self::add_query(&mut url, "minimum_rating", self.minimum_rating);
-        Self::add_query(&mut url, "query_term", self.query_term);
-        Self::add_query(&mut url, "genre", self.genre);
-        Self::add_query(&mut url, "sort_by", self.sort_by);
-        Self::add_query(&mut url, "order_by", self.order_by);
-        Self::add_query(&mut url, "wirth_rt_ratings", self.wirth_rt_ratings);
-        url
-    }
-
     pub async fn execute(&self) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
-        let https = HttpsConnector::new();
-        let client = Client::builder().build::<_, hyper::Body>(https);
-
-        let url = self.get_url();
-
-        let mut res = client.get(url.parse()?).await?;
-        let mut bytes = Vec::new();
-        while let Some(next) = res.data().await {
-            let chunk = next?;
-            bytes.extend(chunk);
-        }
-        let body = String::from_utf8(bytes)?;
-        let response: Response = serde_json::from_str(&body)?;
-        if let Status::Other(status) = response.status {
-            return Err(format!("{}: {}", status, response.status_message).into());
-        }
-        let data = response.data.ok_or("Data missing")?;
+        let data = execute(self).await?;
         match data {
             Data::MovieList(movie_list) => Ok(movie_list),
+            _ => Err("Wrong data received".into()),
         }
+    }
+}
+
+impl<'a> ApiEndpoint for ListMovies<'a> {
+    fn get_url(&self) -> String {
+        let mut url = "https://yts.mx/api/v2/list_movies.json?".to_owned();
+
+        add_query(&mut url, "limit", self.limit);
+        add_query(&mut url, "page", self.page);
+        add_query(&mut url, "quality", self.quality);
+        add_query(&mut url, "minimum_rating", self.minimum_rating);
+        add_query(&mut url, "query_term", self.query_term);
+        add_query(&mut url, "genre", self.genre);
+        add_query(&mut url, "sort_by", self.sort_by);
+        add_query(&mut url, "order_by", self.order_by);
+        add_query(&mut url, "wirth_rt_ratings", self.wirth_rt_ratings);
+        url
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MovieDetails {
+    /// The ID of the movie
+    movie_id: u32,
+    /// When set the data returned will include the added image URLs
+    with_images: Option<bool>,
+    /// When set the data returned will include the added information about the cast
+    with_cast: Option<bool>,
+}
+
+impl MovieDetails {
+    pub fn new(movie_id: u32) -> MovieDetails {
+        MovieDetails {
+            movie_id,
+            with_images: None,
+            with_cast: None,
+        }
+    }
+
+    pub fn with_images(&mut self, with_images: bool) -> &mut Self {
+        self.with_images = Some(with_images);
+        self
+    }
+
+    pub fn with_cast(&mut self, with_cast: bool) -> &mut Self {
+        self.with_cast = Some(with_cast);
+        self
+    }
+
+    pub async fn execute(&self) -> Result<MovieDetail, Box<dyn std::error::Error + Send + Sync>> {
+        let data = execute(self).await?;
+        match data {
+            Data::MovieDetails(movie) => Ok(movie),
+            _ => Err("Wrong data received".into()),
+        }
+    }
+}
+
+impl ApiEndpoint for MovieDetails {
+    fn get_url(&self) -> String {
+        let mut url = "https://yts.mx/api/v2/movie_details.json?".to_owned();
+        add_query(&mut url, "movie_id", Some(self.movie_id));
+        add_query(&mut url, "with_images", self.with_images);
+        add_query(&mut url, "with_cast", self.with_cast);
+        url
     }
 }
 
@@ -265,6 +353,7 @@ mod tests {
         let data = response.data.unwrap();
         let movie_list = match data {
             Data::MovieList(movie_list) => movie_list,
+            _ => panic!("Wrong data"),
         };
         assert_eq!(movie_list.movie_count, 10);
         assert_eq!(movie_list.limit, 20);
@@ -281,10 +370,40 @@ mod tests {
         let data = response.data.unwrap();
         let movie_list = match data {
             Data::MovieList(movie_list) => movie_list,
+            _ => panic!("Wrong data"),
         };
         assert_eq!(movie_list.movie_count, 0);
         assert_eq!(movie_list.limit, 20);
         assert_eq!(movie_list.page_number, 1);
         assert_eq!(movie_list.movies.len(), 0);
+    }
+
+    #[test]
+    fn deserialize_movie_details() {
+        static TEST_DATA: &str = include_str!("test/test_movie_details.json");
+        let response: Response = serde_json::from_str(TEST_DATA).unwrap();
+        assert_eq!(response.status, Status::Ok);
+        assert_eq!(response.status_message, "Query was successful");
+        let data = response.data.unwrap();
+        let movie_details = match data {
+            Data::MovieDetails(movie_details) => movie_details,
+            _ => panic!("Wrong data"),
+        };
+        assert_eq!(movie_details.movie.id, 10);
+    }
+
+    #[test]
+    fn deserialize_movie_details_full() {
+        static TEST_DATA: &str = include_str!("test/test_movie_details_full.json");
+
+        let response: Response = serde_json::from_str(TEST_DATA).unwrap();
+        assert_eq!(response.status, Status::Ok);
+        assert_eq!(response.status_message, "Query was successful");
+        let data = response.data.unwrap();
+        let movie_details = match data {
+            Data::MovieDetails(movie_details) => movie_details,
+            _ => panic!("Wrong data"),
+        };
+        assert_eq!(movie_details.movie.id, 15);
     }
 }
