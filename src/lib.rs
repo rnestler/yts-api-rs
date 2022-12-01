@@ -315,7 +315,7 @@ impl ApiEndpoint for MovieDetails {
 }
 
 #[deprecated(
-    since = "0.1.2",
+    since = "0.2.0",
     note = "Use ListMovies::new().query_term(...).execute() instead"
 )]
 pub async fn list_movies(
