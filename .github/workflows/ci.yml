@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-          toolchain: 1.52
+          toolchain: 1.56
           override: true
       - name: Run build
         uses: actions-rs/cargo@v1
@@ -32,7 +32,7 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-            toolchain: 1.52
+            toolchain: 1.56
             components: clippy
             override: true
       - uses: actions-rs/clippy-check@v1
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/checkout@v1
       - uses: actions-rs/toolchain@v1
         with:
-            toolchain: 1.52
+            toolchain: 1.56
             components: rustfmt
             override: true
       - run: cargo fmt -- --check

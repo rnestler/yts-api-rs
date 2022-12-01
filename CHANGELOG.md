@@ -11,6 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
  * Support all parameters for List Movies with the `ListMovies` builder
  * Support for the movie details API endpoint
 
+### Changed
+
+ * Updated parse-display dependency to 0.6.0
+ * Bump MSRV to 1.56
+
 ### Deprecated
 
  * `list_movies` is replaced by the `ListMovies` builder
