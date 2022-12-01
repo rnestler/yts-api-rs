@@ -1,5 +1,9 @@
 # yts-api-rs
 
+[![GitHub Actions Build Status](https://github.com/rnestler/yts-api-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/rnestler/yts-api-rs/actions/workflows/ci.yml)
+[![Crates.io Version](https://img.shields.io/crates/v/yts-api.svg)](https://crates.io/crates/yts-api)
+[![Crates.io Downloads](https://img.shields.io/crates/d/yts-api.svg)](https://crates.io/crates/yts-api)
+
 Access the yts.mx API. See https://yts.mx/api for more information.
 
 ## License
