@@ -148,7 +148,7 @@ fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
 
 /// Helper to execute an API endpoint
 async fn execute(
-    api_endpoint: &dyn ApiEndpoint,
+    api_endpoint: impl ApiEndpoint,
 ) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
@@ -198,49 +198,49 @@ impl<'a> ListMovies<'a> {
         ListMovies::default()
     }
 
-    pub fn limit(&mut self, limit: u8) -> &mut Self {
+    pub fn limit(mut self, limit: u8) -> Self {
         assert!(limit > 1 && limit <= 50, "limit out of range");
         self.limit = Some(limit);
         self
     }
 
-    pub fn page(&mut self, page: u32) -> &mut Self {
+    pub fn page(mut self, page: u32) -> Self {
         assert!(page > 1, "page out of range");
         self.page = Some(page);
         self
     }
 
-    pub fn quality(&mut self, quality: Quality) -> &mut Self {
+    pub fn quality(mut self, quality: Quality) -> Self {
         self.quality = Some(quality);
         self
     }
 
-    pub fn query_term(&mut self, query_term: &'a str) -> &mut Self {
+    pub fn query_term(mut self, query_term: &'a str) -> Self {
         self.query_term = Some(query_term);
         self
     }
 
-    pub fn genre(&mut self, genre: &'a str) -> &mut Self {
+    pub fn genre(mut self, genre: &'a str) -> Self {
         self.genre = Some(genre);
         self
     }
 
-    pub fn sort_by(&mut self, sort_by: Sort) -> &mut Self {
+    pub fn sort_by(mut self, sort_by: Sort) -> Self {
         self.sort_by = Some(sort_by);
         self
     }
 
-    pub fn order_by(&mut self, order_by: Order) -> &mut Self {
+    pub fn order_by(mut self, order_by: Order) -> Self {
         self.order_by = Some(order_by);
         self
     }
 
-    pub fn wirth_rt_ratings(&mut self, wirth_rt_ratings: bool) -> &mut Self {
+    pub fn wirth_rt_ratings(mut self, wirth_rt_ratings: bool) -> Self {
         self.wirth_rt_ratings = Some(wirth_rt_ratings);
         self
     }
 
-    pub async fn execute(&self) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn execute(self) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
         let data = execute(self).await?;
         match data {
             Data::MovieList(movie_list) => Ok(movie_list),
@@ -285,17 +285,17 @@ impl MovieDetails {
         }
     }
 
-    pub fn with_images(&mut self, with_images: bool) -> &mut Self {
+    pub fn with_images(mut self, with_images: bool) -> Self {
         self.with_images = Some(with_images);
         self
     }
 
-    pub fn with_cast(&mut self, with_cast: bool) -> &mut Self {
+    pub fn with_cast(mut self, with_cast: bool) -> Self {
         self.with_cast = Some(with_cast);
         self
     }
 
-    pub async fn execute(&self) -> Result<MovieDetail, Box<dyn std::error::Error + Send + Sync>> {
+    pub async fn execute(self) -> Result<MovieDetail, Box<dyn std::error::Error + Send + Sync>> {
         let data = execute(self).await?;
         match data {
             Data::MovieDetails(movie) => Ok(movie),
