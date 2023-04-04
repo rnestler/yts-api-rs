@@ -147,13 +147,9 @@ fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
 }
 
 /// Helper to execute an API endpoint
-async fn execute(
-    api_endpoint: impl ApiEndpoint,
-) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
+async fn execute(url: &str) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
-
-    let url = api_endpoint.get_url();
 
     let mut res = client.get(url.parse()?).await?;
     let mut bytes = Vec::new();
@@ -198,50 +194,50 @@ impl<'a> ListMovies<'a> {
         ListMovies::default()
     }
 
-    pub fn limit(mut self, limit: u8) -> Self {
+    pub fn limit(&mut self, limit: u8) -> &mut Self {
         assert!(limit > 1 && limit <= 50, "limit out of range");
         self.limit = Some(limit);
         self
     }
 
-    pub fn page(mut self, page: u32) -> Self {
+    pub fn page(&mut self, page: u32) -> &mut Self {
         assert!(page > 1, "page out of range");
         self.page = Some(page);
         self
     }
 
-    pub fn quality(mut self, quality: Quality) -> Self {
+    pub fn quality(&mut self, quality: Quality) -> &mut Self {
         self.quality = Some(quality);
         self
     }
 
-    pub fn query_term(mut self, query_term: &'a str) -> Self {
+    pub fn query_term(&mut self, query_term: &'a str) -> &mut Self {
         self.query_term = Some(query_term);
         self
     }
 
-    pub fn genre(mut self, genre: &'a str) -> Self {
+    pub fn genre(&mut self, genre: &'a str) -> &mut Self {
         self.genre = Some(genre);
         self
     }
 
-    pub fn sort_by(mut self, sort_by: Sort) -> Self {
+    pub fn sort_by(&mut self, sort_by: Sort) -> &mut Self {
         self.sort_by = Some(sort_by);
         self
     }
 
-    pub fn order_by(mut self, order_by: Order) -> Self {
+    pub fn order_by(&mut self, order_by: Order) -> &mut Self {
         self.order_by = Some(order_by);
         self
     }
 
-    pub fn wirth_rt_ratings(mut self, wirth_rt_ratings: bool) -> Self {
+    pub fn wirth_rt_ratings(&mut self, wirth_rt_ratings: bool) -> &mut Self {
         self.wirth_rt_ratings = Some(wirth_rt_ratings);
         self
     }
 
-    pub async fn execute(self) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
-        let data = execute(self).await?;
+    pub async fn execute(&self) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
+        let data = execute(&self.get_url()).await?;
         match data {
             Data::MovieList(movie_list) => Ok(movie_list),
             _ => Err("Wrong data received".into()),
@@ -285,18 +281,18 @@ impl MovieDetails {
         }
     }
 
-    pub fn with_images(mut self, with_images: bool) -> Self {
+    pub fn with_images(&mut self, with_images: bool) -> &mut Self {
         self.with_images = Some(with_images);
         self
     }
 
-    pub fn with_cast(mut self, with_cast: bool) -> Self {
+    pub fn with_cast(&mut self, with_cast: bool) -> &mut Self {
         self.with_cast = Some(with_cast);
         self
     }
 
-    pub async fn execute(self) -> Result<MovieDetail, Box<dyn std::error::Error + Send + Sync>> {
-        let data = execute(self).await?;
+    pub async fn execute(&self) -> Result<MovieDetail, Box<dyn std::error::Error + Send + Sync>> {
+        let data = execute(&self.get_url()).await?;
         match data {
             Data::MovieDetails(movie) => Ok(movie),
             _ => Err("Wrong data received".into()),
