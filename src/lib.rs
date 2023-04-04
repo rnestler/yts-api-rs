@@ -147,13 +147,9 @@ fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
 }
 
 /// Helper to execute an API endpoint
-async fn execute(
-    api_endpoint: &dyn ApiEndpoint,
-) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
+async fn execute(url: &str) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
     let https = HttpsConnector::new();
     let client = Client::builder().build::<_, hyper::Body>(https);
-
-    let url = api_endpoint.get_url();
 
     let mut res = client.get(url.parse()?).await?;
     let mut bytes = Vec::new();
@@ -241,7 +237,7 @@ impl<'a> ListMovies<'a> {
     }
 
     pub async fn execute(&self) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
-        let data = execute(self).await?;
+        let data = execute(&self.get_url()).await?;
         match data {
             Data::MovieList(movie_list) => Ok(movie_list),
             _ => Err("Wrong data received".into()),
@@ -296,7 +292,7 @@ impl MovieDetails {
     }
 
     pub async fn execute(&self) -> Result<MovieDetail, Box<dyn std::error::Error + Send + Sync>> {
-        let data = execute(self).await?;
+        let data = execute(&self.get_url()).await?;
         match data {
             Data::MovieDetails(movie) => Ok(movie),
             _ => Err("Wrong data received".into()),

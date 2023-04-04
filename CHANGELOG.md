@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
  * Bump MSRV to 1.58
+ * Make API endpoint futures safe to share between threads
 
 ## [0.2.0] - 2022-12-01
 
