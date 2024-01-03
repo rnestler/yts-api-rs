@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
  * Update parse-display dependency to 0.8
+ * Bump MSRV to 1.65
 
 ## [0.3.0] - 2023-04-04
 

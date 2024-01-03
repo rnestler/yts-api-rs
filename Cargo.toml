@@ -4,6 +4,7 @@ version = "0.3.0"
 authors = ["Raphael Nestler <raphael.nestler@gmail.com>"]
 license = "MIT OR Apache-2.0"
 edition = "2018"
+rust-version = "1.65"
 description = "Access the yts.mx API"
 categories = ["api-bindings"]
 repository = "https://github.com/rnestler/yts-api-rs"
