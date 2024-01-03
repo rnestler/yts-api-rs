@@ -1,5 +1,9 @@
-use hyper::{body::HttpBody, Client};
+use bytes::Bytes;
+use http_body_util::BodyExt;
+use http_body_util::Empty;
 use hyper_tls::HttpsConnector;
+use hyper_util::client::legacy::Client;
+use hyper_util::rt::TokioExecutor;
 use parse_display::Display;
 use serde::{Deserialize, Serialize};
 
@@ -149,13 +153,15 @@ fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
 /// Helper to execute an API endpoint
 async fn execute(url: &str) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
     let https = HttpsConnector::new();
-    let client = Client::builder().build::<_, hyper::Body>(https);
+    let client = Client::builder(TokioExecutor::new()).build::<_, Empty<Bytes>>(https);
 
     let mut res = client.get(url.parse()?).await?;
     let mut bytes = Vec::new();
-    while let Some(next) = res.data().await {
-        let chunk = next?;
-        bytes.extend(chunk);
+    while let Some(frame) = res.body_mut().frame().await {
+        let frame = frame?;
+        if let Some(data) = frame.data_ref() {
+            bytes.extend(data);
+        }
     }
     let body = String::from_utf8(bytes)?;
     let response: Response = serde_json::from_str(&body)?;
