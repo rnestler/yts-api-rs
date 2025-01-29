@@ -7,27 +7,16 @@ jobs:
 
   build_and_test:
     name: Build and test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    container: rust:1.70
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: 1.70
-          override: true
-      - name: Run build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --all-features
-      - name: Run test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
+      - run: cargo build --all-features
+      - run: cargo test --all-features
 
   clippy:
     name: Clippy
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v3
       - uses: actions-rs/toolchain@v1
@@ -42,12 +31,9 @@ jobs:
 
   rustfmt:
     name: Rustfmt
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    container: rust:1.84
     steps:
       - uses: actions/checkout@v3
-      - uses: actions-rs/toolchain@v1
-        with:
-            toolchain: 1.84
-            components: rustfmt
-            override: true
+      - run: rustup component add rustfmt
       - run: cargo fmt -- --check
