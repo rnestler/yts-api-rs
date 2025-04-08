@@ -251,7 +251,7 @@ impl<'a> ListMovies<'a> {
     }
 }
 
-impl<'a> ApiEndpoint for ListMovies<'a> {
+impl ApiEndpoint for ListMovies<'_> {
     fn get_url(&self) -> String {
         let mut url = "https://yts.mx/api/v2/list_movies.json?".to_owned();
 
