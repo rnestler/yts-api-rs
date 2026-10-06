@@ -253,7 +253,7 @@ impl<'a> ListMovies<'a> {
 
 impl ApiEndpoint for ListMovies<'_> {
     fn get_url(&self) -> String {
-        let mut url = "https://yts.mx/api/v2/list_movies.json?".to_owned();
+        let mut url = "https://yts.gg/api/v2/list_movies.json?".to_owned();
 
         add_query(&mut url, "limit", self.limit);
         add_query(&mut url, "page", self.page);
@@ -308,7 +308,7 @@ impl MovieDetails {
 
 impl ApiEndpoint for MovieDetails {
     fn get_url(&self) -> String {
-        let mut url = "https://yts.mx/api/v2/movie_details.json?".to_owned();
+        let mut url = "https://yts.gg/api/v2/movie_details.json?".to_owned();
         add_query(&mut url, "movie_id", Some(self.movie_id));
         add_query(&mut url, "with_images", self.with_images);
         add_query(&mut url, "with_cast", self.with_cast);
