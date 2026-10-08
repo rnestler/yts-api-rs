@@ -8,6 +8,7 @@ async fn search(term: &str) -> Result<MovieList, Box<dyn std::error::Error + Sen
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    env_logger::init();
     let search_term = env::args().nth(1).unwrap_or("test".to_string());
     let movie_list = search(&search_term).await?;
     for movie in movie_list.movies {
