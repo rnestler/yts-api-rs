@@ -140,7 +140,12 @@ pub enum Order {
 }
 
 pub trait ApiEndpoint {
-    fn get_url(&self) -> String;
+    const BASE_URLS: &'static [&'static str] =
+        &["https://yts.mx/api/v2/", "https://yts.gg/api/v2/"];
+    fn get_path(&self) -> String;
+    fn get_url(&self) -> String {
+        format!("{}{}", Self::BASE_URLS[0], self.get_path())
+    }
 }
 
 /// Add a query parameter to the given URL
@@ -150,8 +155,8 @@ fn add_query(url: &mut String, name: &str, value: Option<impl fmt::Display>) {
     }
 }
 
-/// Helper to execute an API endpoint
-async fn execute(url: &str) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
+/// Execute a request against a single URL
+async fn execute_url(url: &str) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
     let https = HttpsConnector::new();
     let client = Client::builder(TokioExecutor::new()).build::<_, Empty<Bytes>>(https);
 
@@ -170,6 +175,26 @@ async fn execute(url: &str) -> Result<Data, Box<dyn std::error::Error + Send + S
     }
     let data = response.data.ok_or("Data missing")?;
     Ok(data)
+}
+
+/// Helper to execute an API endpoint, trying all base URLs in order
+async fn execute<T: ApiEndpoint>(
+    endpoint: &T,
+) -> Result<Data, Box<dyn std::error::Error + Send + Sync>> {
+    let mut last_err: Option<Box<dyn std::error::Error + Send + Sync>> = None;
+
+    for base_url in T::BASE_URLS {
+        let url = format!("{}{}", base_url, endpoint.get_path());
+        match execute_url(&url).await {
+            Ok(data) => return Ok(data),
+            Err(e) => {
+                log::warn!("YTS API endpoint failed: {} ({})", url, e);
+                last_err = Some(e);
+            }
+        }
+    }
+
+    Err(last_err.unwrap_or_else(|| "All API endpoints failed".into()))
 }
 
 #[derive(Clone, Debug, Default)]
@@ -243,7 +268,7 @@ impl<'a> ListMovies<'a> {
     }
 
     pub async fn execute(&self) -> Result<MovieList, Box<dyn std::error::Error + Send + Sync>> {
-        let data = execute(&self.get_url()).await?;
+        let data = execute(self).await?;
         match data {
             Data::MovieList(movie_list) => Ok(movie_list),
             _ => Err("Wrong data received".into()),
@@ -252,8 +277,8 @@ impl<'a> ListMovies<'a> {
 }
 
 impl ApiEndpoint for ListMovies<'_> {
-    fn get_url(&self) -> String {
-        let mut url = "https://yts.gg/api/v2/list_movies.json?".to_owned();
+    fn get_path(&self) -> String {
+        let mut url = "list_movies.json?".to_owned();
 
         add_query(&mut url, "limit", self.limit);
         add_query(&mut url, "page", self.page);
@@ -298,7 +323,7 @@ impl MovieDetails {
     }
 
     pub async fn execute(&self) -> Result<MovieDetail, Box<dyn std::error::Error + Send + Sync>> {
-        let data = execute(&self.get_url()).await?;
+        let data = execute(self).await?;
         match data {
             Data::MovieDetails(movie) => Ok(movie),
             _ => Err("Wrong data received".into()),
@@ -307,8 +332,8 @@ impl MovieDetails {
 }
 
 impl ApiEndpoint for MovieDetails {
-    fn get_url(&self) -> String {
-        let mut url = "https://yts.gg/api/v2/movie_details.json?".to_owned();
+    fn get_path(&self) -> String {
+        let mut url = "movie_details.json?".to_owned();
         add_query(&mut url, "movie_id", Some(self.movie_id));
         add_query(&mut url, "with_images", self.with_images);
         add_query(&mut url, "with_cast", self.with_cast);
