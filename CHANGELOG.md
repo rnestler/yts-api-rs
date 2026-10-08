@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
  * Bump MSRV to 1.85
  * Remove `get_url()` from `ApiEndpoint` trait; endpoints now define `get_path()`
+ * Update parse-display dependency to 0.11
 
 ### Fixed
 
