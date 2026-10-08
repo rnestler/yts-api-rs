@@ -140,8 +140,10 @@ pub enum Order {
 }
 
 pub trait ApiEndpoint {
-    const BASE_URLS: &'static [&'static str] =
-        &["https://yts.mx/api/v2/", "https://yts.gg/api/v2/"];
+    const BASE_URLS: &'static [&'static str] = &[
+        "https://movies-api.accel.li/api/v2/",
+        "https://yts.gg/api/v2/",
+    ];
     fn get_path(&self) -> String;
     fn get_url(&self) -> String {
         format!("{}{}", Self::BASE_URLS[0], self.get_path())
