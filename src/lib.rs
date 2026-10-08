@@ -145,9 +145,6 @@ pub trait ApiEndpoint {
         "https://yts.gg/api/v2/",
     ];
     fn get_path(&self) -> String;
-    fn get_url(&self) -> String {
-        format!("{}{}", Self::BASE_URLS[0], self.get_path())
-    }
 }
 
 /// Add a query parameter to the given URL
@@ -360,18 +357,15 @@ mod tests {
     use super::*;
 
     #[test]
-    fn list_movies_url_build_empty() {
-        let url = ListMovies::new().get_url();
-        assert_eq!(url, "https://yts.mx/api/v2/list_movies.json?");
+    fn list_movies_path_build_empty() {
+        let path = ListMovies::new().get_path();
+        assert_eq!(path, "list_movies.json?");
     }
 
     #[test]
-    fn list_movies_url_query_term() {
-        let url = ListMovies::new().query_term("test").get_url();
-        assert_eq!(
-            url,
-            "https://yts.mx/api/v2/list_movies.json?query_term=test&"
-        );
+    fn list_movies_path_query_term() {
+        let path = ListMovies::new().query_term("test").get_path();
+        assert_eq!(path, "list_movies.json?query_term=test&");
     }
 
     #[test]
